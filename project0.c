@@ -3,7 +3,7 @@
 #include "driverlib/sysctl.h"
 #include "driverlib/rom.h"
 
-#include "awsomelib/gpio.h"
+#include "tio2/gpio.h"
 
 //*****************************************************************************
 //

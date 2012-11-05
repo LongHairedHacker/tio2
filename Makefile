@@ -1,6 +1,6 @@
 # main targets and particle libraries
 TARGETS := project0
-PARTICLES := awsomelib
+PARTICLES := tio2
 #
 # Targte MCPU
 MCPU := cortex-m4
