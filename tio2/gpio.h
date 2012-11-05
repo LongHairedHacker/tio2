@@ -4,16 +4,6 @@
 #include "inc/lm4f120h5qr.h"
 #include "inc/hw_memmap.h"
 
-#define GPIO_EN_J   SYSCTL_RCGC2_GPIOJ
-#define GPIO_EN_H   SYSCTL_RCGC2_GPIOH
-#define GPIO_EN_G   SYSCTL_RCGC2_GPIOG
-#define GPIO_EN_F   SYSCTL_RCGC2_GPIOF
-#define GPIO_EN_E   SYSCTL_RCGC2_GPIOE
-#define GPIO_EN_D   SYSCTL_RCGC2_GPIOD
-#define GPIO_EN_C   SYSCTL_RCGC2_GPIOC
-#define GPIO_EN_B   SYSCTL_RCGC2_GPIOB
-#define GPIO_EN_A   SYSCTL_RCGC2_GPIOA
-
 #define GPIO_PIN_0	0x00000001  // pin 0
 #define GPIO_PIN_1	0x00000002  // pin 1
 #define GPIO_PIN_2	0x00000004  // pin 2
@@ -23,67 +13,131 @@
 #define GPIO_PIN_6	0x00000040  // pin 6
 #define GPIO_PIN_7	0x00000080  // pin 7
 
-#define GPIO_OF_DATA	0x000
-#define GPIO_OF_DIR 	0x400
-#define GPIO_OF_DEN 	0x51c
+
+
+/**
+ * Enumeration of all available GPIO ports (and maybe some more).
+ */
+// Values are set to memory addresses directly to keep the code simple.
+enum gpio_port {
+	GPIO_A = GPIO_PORTA_AHB_BASE,
+	GPIO_B = GPIO_PORTB_AHB_BASE,
+	GPIO_C = GPIO_PORTC_AHB_BASE,
+	GPIO_D = GPIO_PORTD_AHB_BASE,
+	GPIO_E = GPIO_PORTE_AHB_BASE,
+	GPIO_F = GPIO_PORTF_AHB_BASE,
+	GPIO_G = GPIO_PORTG_AHB_BASE,
+	GPIO_H = GPIO_PORTH_AHB_BASE,
+	GPIO_J = GPIO_PORTJ_AHB_BASE,
+};
 
 
 
+static inline unsigned long GPIO_read(enum gpio_port port, unsigned char pins)
+{
+	return *((volatile unsigned long*) (port + (pins << 2)));
+}
 
-static inline void GPIO_enable(unsigned long gpio) {
-	SYSCTL_RCGC2_R |= gpio;
-} 
-
-static inline void GPIO_disable(unsigned long gpio) {
-	SYSCTL_RCGC2_R &= ~gpio;
+static inline void GPIO_write(enum gpio_port port, unsigned char pins, unsigned char value)
+{
+	*((volatile unsigned long*) (port + (pins << 2))) = value;
 }
 
 
-#define DECLARE_BIT_SETTER(name,offset) static inline \
-	void name(unsigned long basereg, unsigned long pins) \
-	{ \
-		*((volatile unsigned long *) (basereg + offset)) |= pins; \
-	} 
 
-#define DECLARE_BIT_CLEARER(name,offset) static inline \
-	void name(unsigned long basereg, unsigned long pins) \
-	{ \
-		*((volatile unsigned long *) (basereg + offset)) &= ~pins; \
+static inline void GPIO_set_output(enum gpio_port port, unsigned char pins, unsigned char output)
+{
+	if (output) {
+		*((volatile unsigned long*) (port + 0x400)) |= pins;
+	} else {
+		*((volatile unsigned long*) (port + 0x400)) &= ~pins;
 	}
-
-
-DECLARE_BIT_SETTER(GPIO_set_output, GPIO_OF_DIR)
-DECLARE_BIT_CLEARER(GPIO_set_input, GPIO_OF_DIR)
-
-DECLARE_BIT_SETTER(GPIO_set_digital, GPIO_OF_DEN)
-DECLARE_BIT_CLEARER(GPIO_unset_digital, GPIO_OF_DEN)
+}
 
 
 
-/* 
- * Since the arm assembler does not have a set or clear bit instruction, 
- * it can't set or cler bit in one cycle.
- * But It can write data to a memory location in one cycle.
- * So Setting GPIO pins is done by writing a byte to register,
- * which adress is made up of a base address plus a offset.
- * 
- * 
- *
- */
+// TODO: interrupt sense
+// TODO: interrupt both edges
+// TODO: interrupt interrupt event
+// TODO: interrupt interrupt mask
+// TODO: interrupt raw interrupt status
+// TODO: interrupt masked interrupt status
+// TODO: interrupt interrupt clear
+// TODO: alternate function select
 
-static inline void GPIO_set_pin(unsigned long basereg, unsigned long pins)
-	{ 
-		*((volatile unsigned long *) (basereg + GPIO_OF_DATA + pins*4)) = 0xFF; 
+
+
+enum gpio_pin_drive {
+	GPIO_DRIVE_2MA,
+	GPIO_DRIVE_4MA,
+	GPIO_DRIVE_8MA,
+};
+
+static inline void GPIO_set_drive_strength(enum gpio_port port, unsigned char pins, enum gpio_pin_drive drive)
+{
+	// base address of drive strength config registers is 0x500
+	// three of them exist (one for 2mA, one for 4mA, one for 8mA) back to back
+	switch (drive) {
+		case GPIO_DRIVE_2MA:
+			*((volatile unsigned long*) (port + 0x500)) = pins;
+			break;
+
+		case GPIO_DRIVE_4MA:
+			*((volatile unsigned long*) (port + 0x504)) = pins;
+			break;
+
+		case GPIO_DRIVE_8MA:
+			*((volatile unsigned long*) (port + 0x508)) = pins;
+			break;
 	}
+}
 
 
-static inline void GPIO_clear_pin(unsigned long basereg, unsigned long pins)
-	{ 
-		*((volatile unsigned long *) (basereg + GPIO_OF_DATA + pins*4)) = 0x00; 
+
+// TODO: open drain select
+// TODO: pull-up select
+// TODO: pull-down select
+// TODO: slew rate control select
+
+
+
+static inline void GPIO_set_digital(enum gpio_port port, unsigned char pins, unsigned char enabled)
+{
+	if (enabled) {
+		*((volatile unsigned long*) (port + 0x51c)) |= pins;
+	} else {
+		*((volatile unsigned long*) (port + 0x51c)) &= ~pins;
 	}
+}
 
 
 
+// TODO: lock
+// TODO: commit
+// TODO: analog mode select
+// TODO: port control
+// TODO: adc control
+// TODO: dma control
+// TODO: peripheral id 4-7, 0-3
+// TODO: prime cell id 0-3
+
+
+
+static inline void GPIO_peripheral_enable(enum gpio_port port, unsigned char enabled)
+{
+	// port are all 0x1000 bytes apart, are consecutive, and start with port A
+	// right now, i only know how to handle ports A through F, and i am too lazy to
+	// search the datasheet for the other ports.
+	if (port < GPIO_A || port > GPIO_F)
+		return;
+
+	if (enabled) {
+		SYSCTL_RCGC2_R |= 1 << ((port - GPIO_A) / 0x1000);
+		SYSCTL_GPIOHBCTL_R |= 1 << ((port - GPIO_A) / 0x1000);
+	} else {
+		SYSCTL_RCGC2_R &= ~(1 << ((port - GPIO_A) / 0x1000));
+	}
+}
 
 
 
