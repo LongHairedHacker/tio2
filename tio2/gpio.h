@@ -132,7 +132,6 @@ static inline void GPIO_peripheral_enable(enum gpio_port port, unsigned char ena
 		return;
 
 	if (enabled) {
-		SYSCTL_RCGC2_R |= 1 << ((port - GPIO_A) / 0x1000);
 		SYSCTL_GPIOHBCTL_R |= 1 << ((port - GPIO_A) / 0x1000);
 	} else {
 		SYSCTL_RCGC2_R &= ~(1 << ((port - GPIO_A) / 0x1000));

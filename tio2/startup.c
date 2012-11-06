@@ -307,13 +307,18 @@ extern unsigned long _bss;
 extern unsigned long _ebss;
 
 
+extern unsigned long _startup_hooks;
+extern unsigned long _startup_hooks_end;
 
-// The first thing be called on reset, copy data segment from flash to ram, zero bss segment
-void DefaultResetISR(void)
+
+// Default reset ISR. There should be no need to override this.
+// First, copy .data from flash to SRAM and zero-fill .bss.
+// Then, run all startup hooks in some random order.
+// Finally, call main().
+void ResetISR()
 {
     unsigned long *pulSrc, *pulDest, *bss;
 
-    
     // Copy data segment initializers from flash to SRAM.
     pulSrc = &_etext;
     for(pulDest = &_data; pulDest < &_edata; )
@@ -326,8 +331,12 @@ void DefaultResetISR(void)
         *bss = 0;
     }
 
+	for (unsigned long *hook = &_startup_hooks; hook != &_startup_hooks_end; hook++) {
+		void (**fn)(void) = (void (**)(void)) hook;
+		(**fn)();
+	}
+	main();
 }
-
 
 // Hey there was an interrupt and you didn't write an ISR for it ... should not happen.
 // Let's just wait until you attach an debugger.
@@ -335,13 +344,4 @@ void BadISR(void) {
     while(1)
     {
     }
-}
-
-
-// A lot of ugly copy pasta code
-
-// Warning : Call DefaultResetISR() and main() when redefining this symbol
-void ResetISR(void) {
-    DefaultResetISR();
-    main();
 }

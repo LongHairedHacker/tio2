@@ -12,8 +12,14 @@ SECTIONS
         KEEP(*(.isr_vector))
         *(.text*)
         *(.rodata*)
-        _etext = .;
-    } > FLASH
+
+		. = ALIGN(4);
+		_startup_hooks = .;
+		KEEP(*(.startup_hook))
+		_startup_hooks_end = .;
+        
+		_etext = .;
+	} > FLASH
 
     .data : AT(ADDR(.text) + SIZEOF(.text))
     {
