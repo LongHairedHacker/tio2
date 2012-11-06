@@ -160,7 +160,7 @@ ifneq (,$(LIBRARIES))
 override CXXFLAGS += `pkg-config --cflags $(LIBRARIES)`
 override LDFLAGS += `pkg-config --libs $(LIBRARIES)`
 endif
-override LDFLAGS += $(patsubst %,-l%,$(LIBRARIES_WITHOUT_PKGCONFIG)) -Wl,--start-group $(PARTICLE_LIBRARIES) -Wl,--end-group
+override LDFLAGS += $(patsubst %,-l%,$(LIBRARIES_WITHOUT_PKGCONFIG)) -Wl,--whole-archive -Wl,--start-group $(PARTICLE_LIBRARIES) -Wl,--end-group -Wl,--no-whole-archive
 override LDFLAGS += -Wl,--gc-sections -Wl,--entry,ResetISR $(DRIVERLIB)
 
 override CFLAGS += -mthumb -mcpu=$(MCPU) -mfpu=$(MFPU) -mfloat-abi=$(MFLOAT-ABI)
