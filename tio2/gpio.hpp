@@ -1,5 +1,50 @@
-#ifndef GPIO_H_
-#define GPIO_H_ GPIO_H_
+#ifndef GPIO_HPP_
+#define GPIO_HPP_ GPIO_HPP_
+
+#include <inttypes.h>
+
+struct GPIO {
+	private:
+		mutable volatile uint32_t _values[256];
+		mutable volatile uint32_t _direction;
+		mutable volatile uint32_t _interrupt_sense;
+		mutable volatile uint32_t _interrupt_both_edges;
+		mutable volatile uint32_t _interrupt_event;
+		mutable volatile uint32_t _interrupt_mask;
+		mutable volatile uint32_t _raw_interrupt_status;
+		mutable volatile uint32_t _masked_interrupt_status;
+		mutable volatile uint32_t _interrupt_clear;
+		mutable volatile uint32_t _alternate_function_select;
+		mutable volatile uint8_t rsvd_1[0x100 - 0x20];
+		mutable volatile uint32_t _drive_select_2ma;
+		mutable volatile uint32_t _drive_select_4ma;
+		mutable volatile uint32_t _drive_select_8ma;
+		mutable volatile uint32_t _open_drain_select;
+		mutable volatile uint32_t _pullup_select;
+		mutable volatile uint32_t _pulldown_select;
+		mutable volatile uint32_t _slew_rate_control_select;
+		mutable volatile uint32_t _digital_enable;
+		mutable volatile uint32_t _lock;
+		mutable volatile uint32_t _commit;
+		mutable volatile uint32_t _analog_mode_select;
+		mutable volatile uint32_t _port_control;
+		mutable volatile uint32_t _adc_control;
+		mutable volatile uint32_t _dma_control;
+
+	public:
+		volatile uint32_t& operator[](uint8_t mask) const { return _values[mask]; }
+		volatile uint32_t& outputs() const { return _direction; }
+};
+
+static_assert(__is_standard_layout(GPIO), "Damnit!");
+
+// Linker magic moves these to the appropriate locations in IO space
+extern GPIO gpio_a;
+extern GPIO gpio_b;
+extern GPIO gpio_c;
+extern GPIO gpio_d;
+extern GPIO gpio_e;
+extern GPIO gpio_f;
 
 #include "inc/lm4f120h5qr.h"
 #include "inc/hw_memmap.h"

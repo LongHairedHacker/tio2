@@ -40,4 +40,14 @@ SECTIONS
         *(COMMON)
         _ebss = .;
     } > SRAM
+
+	.peripherals :
+	{
+		gpio_a = 0x40058000;
+		gpio_b = 0x40059000;
+		gpio_c = 0x4005a000;
+		gpio_d = 0x4005b000;
+		gpio_e = 0x4005c000;
+		gpio_f = 0x4005d000;
+	}
 }

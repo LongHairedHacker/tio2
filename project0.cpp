@@ -3,7 +3,7 @@
 #include "driverlib/sysctl.h"
 #include "driverlib/rom.h"
 
-#include "tio2/gpio.h"
+#include "tio2/gpio.hpp"
 
 //*****************************************************************************
 //
@@ -33,7 +33,8 @@ main(void)
 
     //GPIOPinTypeGPIOOutput(GPIO_PORTF_BASE, RED_LED|BLUE_LED|GREEN_LED);
 
-    GPIO_set_output(GPIO_F, RED_LED | BLUE_LED | GREEN_LED, true);
+//    GPIO_set_output(GPIO_F, RED_LED | BLUE_LED | GREEN_LED, true);
+	gpio_f.outputs() |= RED_LED | BLUE_LED | GREEN_LED;
     GPIO_set_digital(GPIO_F, RED_LED | BLUE_LED | GREEN_LED, true);
 
     //GPIO_PORTF_DIR_R = 0x08;
@@ -47,7 +48,8 @@ main(void)
         // Turn on the LED
         //
         //GPIOPinWrite(GPIO_PORTF_BASE, RED_LED|BLUE_LED|GREEN_LED, RED_LED);
-        GPIO_write(GPIO_F, RED_LED | BLUE_LED, RED_LED | BLUE_LED);
+//        GPIO_write(GPIO_F, RED_LED | BLUE_LED, RED_LED | BLUE_LED);
+		gpio_f[RED_LED | BLUE_LED] = 0xff;
 
         //
         // Delay for a bit
@@ -58,7 +60,8 @@ main(void)
         // Turn on the LED
         //
         //GPIOPinWrite(GPIO_PORTF_BASE, RED_LED|BLUE_LED|GREEN_LED, BLUE_LED);
-        GPIO_write(GPIO_F, RED_LED | BLUE_LED, BLUE_LED);
+//        GPIO_write(GPIO_F, RED_LED | BLUE_LED, BLUE_LED);
+		gpio_f[RED_LED | BLUE_LED] = BLUE_LED;
 
         //
         // Delay for a bit

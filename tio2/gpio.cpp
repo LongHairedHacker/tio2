@@ -1,4 +1,4 @@
-#include "gpio.h"
+#include "gpio.hpp"
 
 static void _gpio_init_ahb(void)
 {
@@ -7,4 +7,4 @@ static void _gpio_init_ahb(void)
 }
 
 __attribute__ ((section(".startup_hook")))
-void (*const _gpio_init)(void) = &_gpio_init_ahb;
+extern void (*const _gpio_init)(void) = &_gpio_init_ahb;
