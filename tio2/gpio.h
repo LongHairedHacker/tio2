@@ -28,7 +28,7 @@ enum gpio_port {
 	GPIO_F = GPIO_PORTF_AHB_BASE,
 	GPIO_G = GPIO_PORTG_AHB_BASE,
 	GPIO_H = GPIO_PORTH_AHB_BASE,
-	GPIO_J = GPIO_PORTJ_AHB_BASE,
+	GPIO_J = GPIO_PORTJ_AHB_BASE
 };
 
 
@@ -70,7 +70,7 @@ static inline void GPIO_set_output(enum gpio_port port, unsigned char pins, unsi
 enum gpio_pin_drive {
 	GPIO_DRIVE_2MA,
 	GPIO_DRIVE_4MA,
-	GPIO_DRIVE_8MA,
+	GPIO_DRIVE_8MA
 };
 
 static inline void GPIO_set_drive_strength(enum gpio_port port, unsigned char pins, enum gpio_pin_drive drive)

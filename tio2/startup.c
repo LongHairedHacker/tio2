@@ -2,6 +2,10 @@
 #include "inc/hw_types.h"
 
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define DECLARE_ISR(name) void name(void) __attribute__((weak, alias("BadISR")));
 
 void BadISR(void) __attribute__((weak));
@@ -134,15 +138,11 @@ DECLARE_ISR(PWM1FaultISR)
 // Rest of the application
 extern int main(void);
 
-// Systemstack
-static unsigned long pulStack[64];
-
-
 // Vektor table, linker magic makes sure it lands at 0x00000000
 __attribute__ ((section(".isr_vector")))
-void (* const g_pfnVectors[])(void) =
+void (* const _isrVectors[])(void) =
 {
-    (void (*)(void))((unsigned long)pulStack + sizeof(pulStack)), // The initial stack pointer
+	// initial stack pointer is set to end of SRAM automatically by the linker
     ResetISR, // The reset handler
     NmiSR, // The NMI handler
     FaultISR, // The hard fault handler
@@ -317,17 +317,13 @@ extern unsigned long _startup_hooks_end;
 // Finally, call main().
 void ResetISR()
 {
-    unsigned long *pulSrc, *pulDest, *bss;
-
     // Copy data segment initializers from flash to SRAM.
-    pulSrc = &_etext;
-    for(pulDest = &_data; pulDest < &_edata; )
-    {
-        *pulDest++ = *pulSrc++;
+    for (unsigned long *dest = &_data, *src = &_etext; dest < &_edata; ) {
+        *dest++ = *src++;
     }
 
     // Zero fill the bss segment.
-    for(bss = &_bss; bss < &_ebss; bss++) {
+    for (unsigned long *bss = &_bss; bss < &_ebss; bss++) {
         *bss = 0;
     }
 
@@ -345,3 +341,7 @@ void BadISR(void) {
     {
     }
 }
+
+#ifdef __cplusplus
+}
+#endif

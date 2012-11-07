@@ -7,29 +7,28 @@ MCPU := cortex-m4
 MFPU := fpv4-sp-d16
 MFLOAT-ABI := softfp
 
-CFLAGS +=   -D PART_LM4F120H5QR -D gcc -DTARGET_IS_BLIZZARD_RA2 -Os
 
 STELLARISWARE := /home/sebastian/build/stellarisware
 DRIVERLIB := $(STELLARISWARE)/driverlib/gcc-cm4f/libdriver-cm4f.a
 
 # default compiler/linker flags
-override CPPFLAGS += -I include -I $(STELLARISWARE)
+override CPPFLAGS += -I include -I $(STELLARISWARE) -D PART_LM4F120H5QR -D gcc -DTARGET_IS_BLIZZARD_RA2
 
 ifdef RELEASE
 else
 endif
 
-CCFLAGS += -ffunction-sections -fdata-sections -Wall -pedantic -std=c99
-CFLAGS += $(CCFLAGS)
-CXXFLAGS += $(CCFLAGS)
+CCFLAGS += -ffunction-sections -fdata-sections -Wall -pedantic -g -ffreestanding -Os
+CFLAGS += $(CCFLAGS) -std=c99
+CXXFLAGS += $(CCFLAGS) -std=c++11 -fno-exceptions
 
-LDFLAGS +=
+LDFLAGS += -nostdlib
 
 # default values for internal variables
 AS := arm-none-eabi-as
 CC := arm-none-eabi-gcc
 CXX := arm-none-eabi-g++
-LD := arm-none-eabi-ld
+LD := arm-none-eabi-g++
 CPP := $(CXX) -E
 SED := sed
 FIND := find
@@ -49,7 +48,7 @@ BINDIR = bin
 # C++: cpp
 # C: c
 # Assembler: S
-override CODE_EXTS := c cpp s
+override CODE_EXTS := c cpp S
 
 # external libraries used
 override LIBRARIES :=
@@ -64,11 +63,11 @@ endef
 # here be internals
 ###
 
-#ifdef V
-#override V :=
-#else
-#V := @
-#endif
+ifdef V
+override V :=
+else
+V := @
+endif
 
 # result: cleaned name of particle
 # argument 1: makefile name or directory name of particle root
@@ -161,7 +160,7 @@ override CXXFLAGS += `pkg-config --cflags $(LIBRARIES)`
 override LDFLAGS += `pkg-config --libs $(LIBRARIES)`
 endif
 override LDFLAGS += $(patsubst %,-l%,$(LIBRARIES_WITHOUT_PKGCONFIG)) -Wl,--whole-archive -Wl,--start-group $(PARTICLE_LIBRARIES) -Wl,--end-group -Wl,--no-whole-archive
-override LDFLAGS += -Wl,--gc-sections -Wl,--entry,ResetISR $(DRIVERLIB)
+override LDFLAGS += -Wl,--gc-sections $(DRIVERLIB)
 
 override CFLAGS += -mthumb -mcpu=$(MCPU) -mfpu=$(MFPU) -mfloat-abi=$(MFLOAT-ABI)
 override CXXFLAGS += -mthumb -mcpu=$(MCPU) -mfpu=$(MFPU) -mfloat-abi=$(MFLOAT-ABI)

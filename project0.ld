@@ -4,11 +4,15 @@ MEMORY
     SRAM (rwx) : ORIGIN = 0x20000000, LENGTH = 0x00008000
 }
 
+ENTRY(ResetISR);
+
 SECTIONS
 {
     .text :
     {
         _text = .;
+		/* place initial stack pointer */
+		LONG(ORIGIN(SRAM) + LENGTH(SRAM) - 16*4);
         KEEP(*(.isr_vector))
         *(.text*)
         *(.rodata*)
