@@ -33,6 +33,9 @@ struct GPIO {
 		volatile uint8_t rsvd_2[0x1000 - 0x534 - 4];
 
 	public:
+		GPIO() = delete;
+		GPIO(GPIO&) = delete;
+
 		enum class InterruptMode {
 			None,
 			RisingEdge,
@@ -195,10 +198,66 @@ struct GPIO {
 		// TODO: port control
 		// TODO: adc control
 		// TODO: dma control
+
+		enum class Port {
+			A = 1,
+			B = 2,
+			C = 4,
+			D = 8,
+			E = 16,
+			F = 32
+		};
 };
 
 static_assert(__is_standard_layout(GPIO), "Damnit!");
 static_assert(sizeof(GPIO) == 0x1000, "Damnit!");
+
+class GPIOControlRegister {
+	protected:
+		volatile uint32_t _r;
+
+		uint32_t make_mask()
+		{
+			return 0;
+		}
+
+		template<class... Ports>
+		uint32_t make_mask(GPIO::Port port, Ports... rest)
+		{
+			return static_cast<uint32_t>(port) | make_mask(rest...);
+		}
+
+	public:
+		GPIOControlRegister() = delete;
+		GPIOControlRegister(GPIOControlRegister&) = delete;
+};
+
+class GPIOPortFlags : GPIOControlRegister {
+	public:
+		template<class... Ports>
+		void enable(Ports... ports) { _r |= make_mask(ports...); }
+
+		template<class... Ports>
+		void disable(Ports... ports) { _r &= ~make_mask(ports...); }
+
+		template<class... Ports>
+		void set(Ports... ports) { _r = make_mask(ports...); }
+
+		template<class... Ports>
+		bool enabled(Ports... ports) { return (_r & make_mask(ports...)) == make_mask(ports...); }
+};
+
+static_assert(__is_standard_layout(GPIOPortFlags), "Damnit!");
+static_assert(sizeof(GPIOPortFlags) == 4, "Damnit!");
+
+class GPIOPortStatus : GPIOControlRegister {
+	public:
+		template<class... Ports>
+		bool ready(Ports... ports) { return (_r & make_mask(ports...)) == make_mask(ports...); }
+};
+
+static_assert(__is_standard_layout(GPIOPortStatus), "Damnit!");
+static_assert(sizeof(GPIOPortStatus) == 4, "Damnit!");
 
 // Linker magic moves these to the appropriate locations in IO space
 extern GPIO gpio_a;
@@ -208,40 +267,11 @@ extern GPIO gpio_d;
 extern GPIO gpio_e;
 extern GPIO gpio_f;
 
-namespace gpio_impl {
-	static inline uint32_t make_mask()
-	{
-		return 0;
-	}
-
-	template<class... Ports>
-	static inline uint32_t make_mask(GPIO& port, Ports&... rest)
-	{
-		return (1 << (&port - &gpio_a)) | make_mask(rest...);
-	}
-}
-
-template<class... Ports>
-static inline void gpio_enable(Ports&... ports)
-{
-	uint32_t mask = gpio_impl::make_mask(ports...);
-	*((volatile uint32_t*) (0x400FE608)) |= mask;
-	while ((*((volatile uint32_t*) (0x400FEa08)) & mask) != mask) {
-		// wait until peripheral is ready
-	}
-}
-
-template<class... Ports>
-static inline void gpio_disable(Ports&... ports)
-{
-	*((volatile uint32_t*) (0x400FE608)) &= ~gpio_impl::make_mask(ports...);
-}
-
-template<class... Ports>
-static inline bool gpio_is_enabled(Ports&... ports)
-{
-	return *((volatile uint32_t*) (0x400FE608)) & gpio_impl::make_mask(ports...);
-}
+extern GPIOPortFlags gpio_reset_state;
+extern GPIOPortFlags gpio_in_run;
+extern GPIOPortFlags gpio_in_sleep;
+extern GPIOPortFlags gpio_in_deep_sleep;
+extern GPIOPortStatus gpio_status;
 
 
 

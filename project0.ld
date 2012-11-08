@@ -49,5 +49,11 @@ SECTIONS
 		gpio_d = 0x4005b000;
 		gpio_e = 0x4005c000;
 		gpio_f = 0x4005d000;
+
+		gpio_reset_state = 0x400FE508;
+		gpio_in_run = 0x400FE608;
+		gpio_in_sleep = 0x400FE708;
+		gpio_in_deep_sleep = 0x400FE808;
+		gpio_status = 0x400FEA08;
 	}
 }
