@@ -5,38 +5,203 @@
 
 struct GPIO {
 	private:
-		mutable volatile uint32_t _values[256];
-		mutable volatile uint32_t _direction;
-		mutable volatile uint32_t _interrupt_sense;
-		mutable volatile uint32_t _interrupt_both_edges;
-		mutable volatile uint32_t _interrupt_event;
-		mutable volatile uint32_t _interrupt_mask;
-		mutable volatile uint32_t _raw_interrupt_status;
-		mutable volatile uint32_t _masked_interrupt_status;
-		mutable volatile uint32_t _interrupt_clear;
-		mutable volatile uint32_t _alternate_function_select;
-		mutable volatile uint8_t rsvd_1[0x100 - 0x20];
-		mutable volatile uint32_t _drive_select_2ma;
-		mutable volatile uint32_t _drive_select_4ma;
-		mutable volatile uint32_t _drive_select_8ma;
-		mutable volatile uint32_t _open_drain_select;
-		mutable volatile uint32_t _pullup_select;
-		mutable volatile uint32_t _pulldown_select;
-		mutable volatile uint32_t _slew_rate_control_select;
-		mutable volatile uint32_t _digital_enable;
-		mutable volatile uint32_t _lock;
-		mutable volatile uint32_t _commit;
-		mutable volatile uint32_t _analog_mode_select;
-		mutable volatile uint32_t _port_control;
-		mutable volatile uint32_t _adc_control;
-		mutable volatile uint32_t _dma_control;
+		volatile uint32_t _values[256];
+		volatile uint32_t _direction;
+		volatile uint32_t _interrupt_sense;
+		volatile uint32_t _interrupt_both_edges;
+		volatile uint32_t _interrupt_event;
+		volatile uint32_t _interrupt_mask;
+		volatile uint32_t _raw_interrupt_status;
+		volatile uint32_t _masked_interrupt_status;
+		volatile uint32_t _interrupt_clear;
+		volatile uint32_t _alternate_function_select;
+		volatile uint8_t rsvd_1[0x500 - 0x420 - 4];
+		volatile uint32_t _drive_select_2ma;
+		volatile uint32_t _drive_select_4ma;
+		volatile uint32_t _drive_select_8ma;
+		volatile uint32_t _open_drain_select;
+		volatile uint32_t _pullup_select;
+		volatile uint32_t _pulldown_select;
+		volatile uint32_t _slew_rate_control_select;
+		volatile uint32_t _digital_enable;
+		volatile uint32_t _lock;
+		volatile uint32_t _commit;
+		volatile uint32_t _analog_mode_select;
+		volatile uint32_t _port_control;
+		volatile uint32_t _adc_control;
+		volatile uint32_t _dma_control;
+		volatile uint8_t rsvd_2[0x1000 - 0x534 - 4];
 
 	public:
-		volatile uint32_t& operator[](uint8_t mask) const { return _values[mask]; }
-		volatile uint32_t& outputs() const { return _direction; }
+		enum class InterruptMode {
+			None,
+			RisingEdge,
+			FallingEdge,
+			BothEdges,
+			HighLevel,
+			LowLevel
+		};
+
+		uint32_t operator[](uint8_t mask) const { return _values[mask]; }
+		volatile uint32_t& operator[](uint8_t mask) { return _values[mask]; }
+
+		uint32_t outputs() const { return _direction; }
+		volatile uint32_t& outputs() { return _direction; }
+
+		// Set interrupt mode of the given pin.
+		// Any interrupt status that has been set for the pins will be cleared.
+		void interruptMode(uint8_t pin, InterruptMode mode)
+		{
+			pin &= 7;
+
+			_interrupt_mask &= ~(1 << pin);
+			if (mode != InterruptMode::None) {
+				switch (mode) {
+					case InterruptMode::RisingEdge:
+						_interrupt_sense &= ~(1 << pin);
+						_interrupt_both_edges &= ~(1 << pin);
+						_interrupt_event |= (1 << pin);
+						break;
+
+					case InterruptMode::FallingEdge:
+						_interrupt_sense &= ~(1 << pin);
+						_interrupt_both_edges &= ~(1 << pin);
+						_interrupt_event &= ~(1 << pin);
+						break;
+
+					case InterruptMode::BothEdges:
+						_interrupt_sense &= ~(1 << pin);
+						_interrupt_both_edges |= (1 << pin);
+						break;
+
+					case InterruptMode::HighLevel:
+						_interrupt_sense |= (1 << pin);
+						_interrupt_event |= (1 << pin);
+						break;
+
+					case InterruptMode::LowLevel:
+						_interrupt_sense |= (1 << pin);
+						_interrupt_event &= ~(1 << pin);
+						break;
+
+					default:
+						// shut up the fucking compiler
+						break;
+				}
+
+				_interrupt_clear = (1 << pin);
+				_interrupt_mask |= (1 << pin);
+			}
+		}
+
+		InterruptMode interruptMode(uint8_t pin) const
+		{
+			pin &= 7;
+
+			if (_interrupt_mask & (1 << pin)) {
+				if (_interrupt_sense & (1 << pin)) {
+					return _interrupt_event & (1 << pin) ? InterruptMode::HighLevel : InterruptMode::LowLevel;
+				} else {
+					if (_interrupt_both_edges & (1 << pin)) {
+						return InterruptMode::BothEdges;
+					} else {
+						return _interrupt_event & (1 << pin) ? InterruptMode::RisingEdge : InterruptMode::FallingEdge;
+					}
+				}
+			} else {
+				return InterruptMode::None;
+			}
+		}
+
+		uint32_t interrupt_sense() const { return _interrupt_sense; }
+		volatile uint32_t& interrupt_sense() { return _interrupt_sense; }
+
+		uint32_t interrupt_both_edges() const { return _interrupt_both_edges; }
+		volatile uint32_t& interrupt_both_edges() { return _interrupt_both_edges; }
+
+		uint32_t interrupt_event() const { return _interrupt_event; }
+		volatile uint32_t& interrupt_event() { return _interrupt_event; }
+
+		uint32_t interrupt_mask() const { return _interrupt_mask; }
+		volatile uint32_t& interrupt_mask() { return _interrupt_mask; }
+
+		uint32_t raw_interrupt_status() const { return _raw_interrupt_status; }
+
+		uint32_t masked_interrupt_status() const { return _masked_interrupt_status; }
+
+		void clear_interrupt_status(uint8_t pins) { _interrupt_clear = pins; }
+
+		// TODO: alternate function select
+
+		enum class Drive {
+			Strength2mA,
+			Strength4mA,
+			Strength8mA,
+			Strength8mA_SlewRateLimited
+		};
+
+		void drive_strength(uint8_t pin, Drive drive)
+		{
+			switch (drive) {
+				case Drive::Strength2mA:
+					_drive_select_2ma = (1 << (pin & 7));
+					return;
+
+				case Drive::Strength4mA:
+					_drive_select_4ma = (1 << (pin & 7));
+					return;
+
+				case Drive::Strength8mA:
+					_drive_select_8ma = (1 << (pin & 7));
+					return;
+
+				case Drive::Strength8mA_SlewRateLimited:
+					_drive_select_8ma = (1 << (pin & 7));
+					_slew_rate_control_select = (1 << (pin & 7));
+					return;
+			}
+		}
+
+		Drive drive_strength(uint8_t pin) const
+		{
+			if (_drive_select_2ma & (1 << (pin & 7))) {
+				return Drive::Strength2mA;
+			} else if (_drive_select_4ma & (1 << (pin & 7))) {
+				return Drive::Strength4mA;
+			} else if (_drive_select_8ma & (1 << (pin & 7))) {
+				return _slew_rate_control_select & (1 << (pin & 7)) ? Drive::Strength8mA_SlewRateLimited : Drive::Strength8mA;
+			}
+		}
+
+		uint32_t open_drain_on() const { return _open_drain_select; }
+		volatile uint32_t& open_drain_on() { return _open_drain_select; }
+
+		uint32_t pullup_on() const { return _pullup_select; }
+		volatile uint32_t& pullup_on() { return _pullup_select; }
+
+		uint32_t pulldown_on() const { return _pulldown_select; }
+		volatile uint32_t& pulldown_on() { return _pulldown_select; }
+
+		uint32_t digital_enable() const { return _digital_enable; }
+		volatile uint32_t& digital_enable() { return _digital_enable; }
+
+		uint32_t lock() const { return _lock; }
+		volatile uint32_t& lock() { return _lock; }
+
+		uint32_t commit() const { return _commit; }
+		volatile uint32_t& commit() { return _commit; }
+
+		// TODO: analog mode select
+		// TODO: port control
+		// TODO: adc control
+		// TODO: dma control
+
+		static void enable(GPIO& port, bool enable = true);
+		static bool is_enabled(GPIO& port);
 };
 
 static_assert(__is_standard_layout(GPIO), "Damnit!");
+static_assert(sizeof(GPIO) == 0x1000, "Damnit!");
 
 // Linker magic moves these to the appropriate locations in IO space
 extern GPIO gpio_a;
@@ -46,141 +211,22 @@ extern GPIO gpio_d;
 extern GPIO gpio_e;
 extern GPIO gpio_f;
 
-#include "inc/lm4f120h5qr.h"
-#include "inc/hw_memmap.h"
-
-#define GPIO_PIN_0	0x00000001  // pin 0
-#define GPIO_PIN_1	0x00000002  // pin 1
-#define GPIO_PIN_2	0x00000004  // pin 2
-#define GPIO_PIN_3	0x00000008  // pin 3
-#define GPIO_PIN_4	0x00000010  // pin 4
-#define GPIO_PIN_5	0x00000020  // pin 5
-#define GPIO_PIN_6	0x00000040  // pin 6
-#define GPIO_PIN_7	0x00000080  // pin 7
-
-
-
-/**
- * Enumeration of all available GPIO ports (and maybe some more).
- */
-// Values are set to memory addresses directly to keep the code simple.
-enum gpio_port {
-	GPIO_A = GPIO_PORTA_AHB_BASE,
-	GPIO_B = GPIO_PORTB_AHB_BASE,
-	GPIO_C = GPIO_PORTC_AHB_BASE,
-	GPIO_D = GPIO_PORTD_AHB_BASE,
-	GPIO_E = GPIO_PORTE_AHB_BASE,
-	GPIO_F = GPIO_PORTF_AHB_BASE,
-	GPIO_G = GPIO_PORTG_AHB_BASE,
-	GPIO_H = GPIO_PORTH_AHB_BASE,
-	GPIO_J = GPIO_PORTJ_AHB_BASE
-};
-
-
-
-static inline unsigned long GPIO_read(enum gpio_port port, unsigned char pins)
+inline void GPIO::enable(GPIO& port, bool enable)
 {
-	return *((volatile unsigned long*) (port + (pins << 2)));
-}
-
-static inline void GPIO_write(enum gpio_port port, unsigned char pins, unsigned char value)
-{
-	*((volatile unsigned long*) (port + (pins << 2))) = value;
-}
-
-
-
-static inline void GPIO_set_output(enum gpio_port port, unsigned char pins, unsigned char output)
-{
-	if (output) {
-		*((volatile unsigned long*) (port + 0x400)) |= pins;
+	if (enable) {
+		uint32_t mask = 1 << (&port - &gpio_a);
+		*((volatile uint32_t*) (0x400FE608)) |= mask;
+		while ((*((volatile uint32_t*) (0x400FEa08)) & mask) != mask) {
+			// wait until peripheral is ready
+		}
 	} else {
-		*((volatile unsigned long*) (port + 0x400)) &= ~pins;
+		*((volatile uint32_t*) (0x400FE608)) &= ~(1 << (&port - &gpio_a));
 	}
 }
 
-
-
-// TODO: interrupt sense
-// TODO: interrupt both edges
-// TODO: interrupt interrupt event
-// TODO: interrupt interrupt mask
-// TODO: interrupt raw interrupt status
-// TODO: interrupt masked interrupt status
-// TODO: interrupt interrupt clear
-// TODO: alternate function select
-
-
-
-enum gpio_pin_drive {
-	GPIO_DRIVE_2MA,
-	GPIO_DRIVE_4MA,
-	GPIO_DRIVE_8MA
-};
-
-static inline void GPIO_set_drive_strength(enum gpio_port port, unsigned char pins, enum gpio_pin_drive drive)
+inline bool GPIO::is_enabled(GPIO& port)
 {
-	// base address of drive strength config registers is 0x500
-	// three of them exist (one for 2mA, one for 4mA, one for 8mA) back to back
-	switch (drive) {
-		case GPIO_DRIVE_2MA:
-			*((volatile unsigned long*) (port + 0x500)) = pins;
-			break;
-
-		case GPIO_DRIVE_4MA:
-			*((volatile unsigned long*) (port + 0x504)) = pins;
-			break;
-
-		case GPIO_DRIVE_8MA:
-			*((volatile unsigned long*) (port + 0x508)) = pins;
-			break;
-	}
-}
-
-
-
-// TODO: open drain select
-// TODO: pull-up select
-// TODO: pull-down select
-// TODO: slew rate control select
-
-
-
-static inline void GPIO_set_digital(enum gpio_port port, unsigned char pins, unsigned char enabled)
-{
-	if (enabled) {
-		*((volatile unsigned long*) (port + 0x51c)) |= pins;
-	} else {
-		*((volatile unsigned long*) (port + 0x51c)) &= ~pins;
-	}
-}
-
-
-
-// TODO: lock
-// TODO: commit
-// TODO: analog mode select
-// TODO: port control
-// TODO: adc control
-// TODO: dma control
-// TODO: peripheral id 4-7, 0-3
-// TODO: prime cell id 0-3
-
-
-
-static inline void GPIO_peripheral_enable(enum gpio_port port, unsigned char enabled)
-{
-	// port are all 0x1000 bytes apart, are consecutive, and start with port A
-	// right now, i only know how to handle ports A through F, and i am too lazy to
-	// search the datasheet for the other ports.
-	if (port < GPIO_A || port > GPIO_F)
-		return;
-
-	if (enabled) {
-		SYSCTL_RCGC2_R |= 1 << ((port - GPIO_A) / 0x1000);
-	} else {
-		SYSCTL_RCGC2_R &= ~(1 << ((port - GPIO_A) / 0x1000));
-	}
+	return *((volatile uint32_t*) (0x400FE608)) & (1 << ((((uint32_t) &port) - ((uint32_t) &gpio_a)) / 0x1000));
 }
 
 

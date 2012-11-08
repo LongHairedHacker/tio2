@@ -11,9 +11,9 @@
 //
 //*****************************************************************************
 
-#define RED_LED   GPIO_PIN_1
-#define BLUE_LED  GPIO_PIN_2
-#define GREEN_LED GPIO_PIN_3
+#define RED_LED   2
+#define BLUE_LED  4
+#define GREEN_LED 8
 
 
 int
@@ -28,17 +28,11 @@ main(void)
     //
     // Enable and configure the GPIO port for the LED operation.
     //
-    //SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOF);
-    GPIO_peripheral_enable(GPIO_F, true);
+	GPIO::enable(gpio_f);
 
-    //GPIOPinTypeGPIOOutput(GPIO_PORTF_BASE, RED_LED|BLUE_LED|GREEN_LED);
-
-//    GPIO_set_output(GPIO_F, RED_LED | BLUE_LED | GREEN_LED, true);
 	gpio_f.outputs() |= RED_LED | BLUE_LED | GREEN_LED;
-    GPIO_set_digital(GPIO_F, RED_LED | BLUE_LED | GREEN_LED, true);
+	gpio_f.digital_enable() |= RED_LED | BLUE_LED | GREEN_LED;
 
-    //GPIO_PORTF_DIR_R = 0x08;
-    //GPIO_PORTF_DEN_R = 0x08;
     //
     // Loop Forever
     //
@@ -48,7 +42,6 @@ main(void)
         // Turn on the LED
         //
         //GPIOPinWrite(GPIO_PORTF_BASE, RED_LED|BLUE_LED|GREEN_LED, RED_LED);
-//        GPIO_write(GPIO_F, RED_LED | BLUE_LED, RED_LED | BLUE_LED);
 		gpio_f[RED_LED | BLUE_LED] = 0xff;
 
         //
@@ -60,7 +53,6 @@ main(void)
         // Turn on the LED
         //
         //GPIOPinWrite(GPIO_PORTF_BASE, RED_LED|BLUE_LED|GREEN_LED, BLUE_LED);
-//        GPIO_write(GPIO_F, RED_LED | BLUE_LED, BLUE_LED);
 		gpio_f[RED_LED | BLUE_LED] = BLUE_LED;
 
         //
