@@ -28,7 +28,7 @@ main(void)
     //
     // Enable and configure the GPIO port for the LED operation.
     //
-	GPIO::enable(gpio_f);
+	gpio_enable(gpio_f);
 
 	gpio_f.outputs() |= RED_LED | BLUE_LED | GREEN_LED;
 	gpio_f.digital_enable() |= RED_LED | BLUE_LED | GREEN_LED;

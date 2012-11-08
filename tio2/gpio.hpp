@@ -195,9 +195,6 @@ struct GPIO {
 		// TODO: port control
 		// TODO: adc control
 		// TODO: dma control
-
-		static void enable(GPIO& port, bool enable = true);
-		static bool is_enabled(GPIO& port);
 };
 
 static_assert(__is_standard_layout(GPIO), "Damnit!");
@@ -211,22 +208,39 @@ extern GPIO gpio_d;
 extern GPIO gpio_e;
 extern GPIO gpio_f;
 
-inline void GPIO::enable(GPIO& port, bool enable)
-{
-	if (enable) {
-		uint32_t mask = 1 << (&port - &gpio_a);
-		*((volatile uint32_t*) (0x400FE608)) |= mask;
-		while ((*((volatile uint32_t*) (0x400FEa08)) & mask) != mask) {
-			// wait until peripheral is ready
-		}
-	} else {
-		*((volatile uint32_t*) (0x400FE608)) &= ~(1 << (&port - &gpio_a));
+namespace gpio_impl {
+	static inline uint32_t make_mask()
+	{
+		return 0;
+	}
+
+	template<class... Ports>
+	static inline uint32_t make_mask(GPIO& port, Ports&... rest)
+	{
+		return (1 << (&port - &gpio_a)) | make_mask(rest...);
 	}
 }
 
-inline bool GPIO::is_enabled(GPIO& port)
+template<class... Ports>
+static inline void gpio_enable(Ports&... ports)
 {
-	return *((volatile uint32_t*) (0x400FE608)) & (1 << ((((uint32_t) &port) - ((uint32_t) &gpio_a)) / 0x1000));
+	uint32_t mask = gpio_impl::make_mask(ports...);
+	*((volatile uint32_t*) (0x400FE608)) |= mask;
+	while ((*((volatile uint32_t*) (0x400FEa08)) & mask) != mask) {
+		// wait until peripheral is ready
+	}
+}
+
+template<class... Ports>
+static inline void gpio_disable(Ports&... ports)
+{
+	*((volatile uint32_t*) (0x400FE608)) &= ~gpio_impl::make_mask(ports...);
+}
+
+template<class... Ports>
+static inline bool gpio_is_enabled(Ports&... ports)
+{
+	return *((volatile uint32_t*) (0x400FE608)) & gpio_impl::make_mask(ports...);
 }
 
 
