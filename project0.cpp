@@ -1,9 +1,5 @@
-#include "inc/hw_types.h"
-#include "inc/hw_memmap.h"
-#include "driverlib/sysctl.h"
-#include "driverlib/rom.h"
-
 #include "tio2/gpio.hpp"
+#include "tio2/clock.hpp"
 
 //*****************************************************************************
 //
@@ -15,50 +11,60 @@
 #define BLUE_LED  4
 #define GREEN_LED 8
 
+using namespace tio2;
 
-int
-main(void)
+int main(void)
 {
-    //
-    // Setup the system clock to run at 50 Mhz from PLL with crystal reference
-    //
-    ROM_SysCtlClockSet(SYSCTL_SYSDIV_2|SYSCTL_USE_PLL|SYSCTL_XTAL_16MHZ|
-                    SYSCTL_OSC_MAIN);
+	clock.config(
+			clock.config()
+				.pll_powerdown(false)
+				.pll_bypass(false)
+				.sysdiv(25)
+				.xtal(XTAL::X_16_MHz)
+				.main_oscillator_disable(false)
+				.oscillator_source(OscSource::Main)
+	);
 
-    //
-    // Enable and configure the GPIO port for the LED operation.
-    //
-	gpio_in_run.enable(GPIO::Port::A, GPIO::Port::F);
+	//
+	// Enable and configure the GPIO port for the LED operation.
+	//
+	gpio_in_run.enable(GPIO::Port::A, GPIO::Port::E, GPIO::Port::F);
 	while (!gpio_status.ready(GPIO::Port::F));
 
 	gpio_f.outputs() |= RED_LED | BLUE_LED | GREEN_LED;
 	gpio_f.digital_enable() |= RED_LED | BLUE_LED | GREEN_LED;
 
-    //
-    // Loop Forever
-    //
-    while(1)
-    {
-        //
-        // Turn on the LED
-        //
-        //GPIOPinWrite(GPIO_PORTF_BASE, RED_LED|BLUE_LED|GREEN_LED, RED_LED);
+	//
+	// Loop Forever
+	//
+	while(1)
+	{
+		//
+		// Turn on the LED
+		//
+		//GPIOPinWrite(GPIO_PORTF_BASE, RED_LED|BLUE_LED|GREEN_LED, RED_LED);
 		gpio_f[RED_LED | BLUE_LED] = 0;
 
-        //
-        // Delay for a bit
-        //
-        //SysCtlDelay(2000000);
+		for (int i = 0; i < 1600000; i++) { __asm__ __volatile__ ("nop"); }
 
-        //
-        // Turn on the LED
-        //
-        //GPIOPinWrite(GPIO_PORTF_BASE, RED_LED|BLUE_LED|GREEN_LED, BLUE_LED);
+		//
+		// Delay for a bit
+		//
+		//SysCtlDelay(2000000);
+
+		//
+		// Turn on the LED
+		//
+		//GPIOPinWrite(GPIO_PORTF_BASE, RED_LED|BLUE_LED|GREEN_LED, BLUE_LED);
 		gpio_f[RED_LED | BLUE_LED | GREEN_LED] = RED_LED | BLUE_LED;
 
-        //
-        // Delay for a bit
-        //
-        //SysCtlDelay(2000000);
-    }
+		for (int i = 0; i < 1600000; i++) { __asm__ __volatile__ ("nop"); }
+
+		//
+		// Delay for a bit
+		//
+		//SysCtlDelay(2000000);
+	}
+
+	return 0;
 }

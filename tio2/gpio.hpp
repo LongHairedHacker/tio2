@@ -3,6 +3,8 @@
 
 #include <inttypes.h>
 
+namespace tio2 {
+
 struct GPIO {
 	private:
 		volatile uint32_t _values[256];
@@ -273,6 +275,6 @@ extern GPIOPortFlags gpio_in_sleep;
 extern GPIOPortFlags gpio_in_deep_sleep;
 extern GPIOPortStatus gpio_status;
 
-
+}
 
 #endif
